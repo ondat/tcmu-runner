@@ -1020,6 +1020,14 @@ static int dev_added(struct tcmu_device *dev)
 	tcmu_dev_dbg(dev, "Got block_size %d, size in bytes %"PRId64"\n",
 		     block_size, dev_size);
 
+#ifdef __aarch64__
+	ret = pthread_mutex_init(&rdev->cmd_ring_mutex, NULL);
+	if (ret) {
+		ret = -ret;
+		goto free_rdev;
+	}
+#endif
+
 	ret = pthread_spin_init(&rdev->cmds_list_lock, 0);
 	if (ret) {
 		ret = -ret;

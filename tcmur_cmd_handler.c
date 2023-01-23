@@ -28,6 +28,13 @@
 #include "tcmur_cmd_handler.h"
 #include "alua.h"
 
+#ifdef __aarch64__
+static void _cleanup_mutex_lock(void *arg)
+{
+	pthread_mutex_unlock(arg);
+}
+#endif
+
 static void _cleanup_spin_lock(void *arg)
 {
 	pthread_spin_unlock(arg);
@@ -70,12 +77,22 @@ static void aio_command_finish(struct tcmu_device *dev, struct tcmulib_cmd *cmd,
 	struct tcmur_device *rdev = tcmu_dev_get_private(dev);
 	int wake_up;
 
+#ifdef __aarch64__
+	pthread_cleanup_push(_cleanup_mutex_lock, (void *)&rdev->cmd_ring_mutex);
+	pthread_mutex_lock(&rdev->cmd_ring_mutex);
+#endif
+
 	tcmur_tcmulib_cmd_complete(dev, cmd, rc);
 	track_aio_request_finish(rdev, &wake_up);
 	while (wake_up) {
 		tcmulib_processing_complete(dev);
 		track_aio_wakeup_finish(rdev, &wake_up);
 	}
+
+#ifdef __aarch64__
+	pthread_mutex_unlock(&rdev->cmd_ring_mutex);
+	pthread_cleanup_pop(0);
+#endif
 }
 
 void tcmur_cmd_complete(struct tcmu_device *dev, void *data, int rc)

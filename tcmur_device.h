@@ -75,6 +75,9 @@ struct tcmur_device {
 	 */
         struct tcmu_io_queue work_queue;
         struct tcmu_track_aio track_queue;
+#ifdef __aarch64__
+	pthread_mutex_t cmd_ring_mutex;
+#endif
 
 	pthread_mutex_t caw_lock; /* for atomic CAW operation */
 
